@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Racecar Game</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(to bottom, #a2d2ff, #ffb6b9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h1 {
+        margin-top: 20px;
+        color: #ff758f;
+        text-shadow: 1px 1px #fff;
+    }
+
+    #controls {
+        margin: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    label {
+        color: #333;
+    }
+
+    select, input[type=color] {
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    #gameCanvas {
+        background: #fff;
+        border: 3px solid #ff758f;
+        border-radius: 15px;
+    }
+
+    #score {
+        margin-top: 10px;
+        font-size: 20px;
+        color: #333;
+    }
+
+</style>
+</head>
+<body>
+
+<h1>Speedy the Racecar!</h1>
+
+<div id="controls">
+    <label for="carColor">Car Color:</label>
+    <input type="color" id="carColor" value="#ff0000">
+    
+    <label for="carShape">Car Shape:</label>
+    <select id="carShape">
+        <option value="rectangle">Rectangle</option>
+        <option value="triangle">Triangle</option>
+        <option value="circle">Circle</option>
+    </select>
+    
+    <button onclick="startGame()">Start Game</button>
+</div>
+
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<div id="score">Score: 0</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let car = {
+    x: canvas.width / 2 - 20,
+    y: canvas.height - 100,
+    width: 40,
+    height: 60,
+    color: '#ff0000',
+    shape: 'rectangle'
+};
+
+let keys = {};
+let obstacles = [];
+let score = 0;
+let gameInterval;
+let spawnInterval;
+let gameSpeed = 5;
+
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+document.getElementById('carColor').addEventListener('change', e => {
+    car.color = e.target.value;
+});
+
+document.getElementById('carShape').addEventListener('change', e => {
+    car.shape = e.target.value;
+});
+
+function drawCar() {
+    ctx.fillStyle = car.color;
+    ctx.beginPath();
+    if(car.shape === 'rectangle') {
+        ctx.fillRect(car.x, car.y, car.width, car.height);
+    } else if(car.shape === 'triangle') {
+        ctx.moveTo(car.x + car.width/2, car.y);
+        ctx.lineTo(car.x, car.y + car.height);
+        ctx.lineTo(car.x + car.width, car.y + car.height);
+        ctx.closePath();
+        ctx.fill();
+    } else if(car.shape === 'circle') {
+        ctx.arc(car.x + car.width/2, car.y + car.height/2, car.width/2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawObstacles() {
+    ctx.fillStyle = '#555';
+    obstacles.forEach(obs => {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+    });
+}
+
+function updateObstacles() {
+    obstacles.forEach(obs => obs.y += gameSpeed);
+    obstacles = obstacles.filter(obs => obs.y < canvas.height);
+}
+
+function spawnObstacle() {
+    let width = Math.random() * 50 + 30;
+    let x = Math.random() * (canvas.width - width);
+    obstacles.push({x: x, y: -60, width: width, height: 20});
+}
+
+function detectCollision() {
+    for(let obs of obstacles) {
+        if(car.x < obs.x + obs.width &&
+           car.x + car.width > obs.x &&
+           car.y < obs.y + obs.height &&
+           car.y + car.height > obs.y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function updateScore() {
+    score++;
+    document.getElementById('score').innerText = 'Score: ' + score;
+}
+
+function moveCar() {
+    if(keys['ArrowLeft'] && car.x > 0) car.x -= 7;
+    if(keys['ArrowRight'] && car.x + car.width < canvas.width) car.x += 7;
+    if(keys['ArrowUp'] && car.y > 0) car.y -= 5;
+    if(keys['ArrowDown'] && car.y + car.height < canvas.height) car.y += 5;
+}
+
+function drawBackground() {
+    ctx.fillStyle = '#a2d2ff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Moving road lines
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 5;
+    for(let i = 0; i < canvas.height; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(canvas.width/2, i + (score % 40));
+        ctx.lineTo(canvas.width/2, i + 20 + (score % 40));
+        ctx.stroke();
+    }
+}
+
+function gameLoop() {
+    drawBackground();
+    moveCar();
+    drawCar();
+    updateObstacles();
+    drawObstacles();
+    if(detectCollision()) {
+        clearInterval(gameInterval);
+        clearInterval(spawnInterval);
+        alert('Game Over! Your score: ' + score);
+    } else {
+        updateScore();
+    }
+}
+
+function startGame() {
+    car.x = canvas.width / 2 - 20;
+    car.y = canvas.height - 100;
+    score = 0;
+    obstacles = [];
+    clearInterval(gameInterval);
+    clearInterval(spawnInterval);
+    gameInterval = setInterval(gameLoop, 30);
+    spawnInterval = setInterval(spawnObstacle, 1500);
+}
+
+</script>
+</body>
+</html>
+
